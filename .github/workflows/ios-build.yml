@@ -19,7 +19,7 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           echo "Xcode version: $(xcodebuild -version)"
 
-      - name: Debug: Show Repository Structure
+      - name: Debug Show Repository Structure
         run: |
           echo "=== Current directory: $(pwd) ==="
           echo "=== Repository contents ==="
