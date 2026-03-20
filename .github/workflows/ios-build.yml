@@ -11,7 +11,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: debug: Show Build Products
+      - name: debug
         run: |
           echo "=== Contents of ./build/Build/Products ==="
           find ./build/Build/Products -type d -name "*.app"
