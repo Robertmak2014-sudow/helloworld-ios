@@ -11,61 +11,30 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Select Xcode version
-        run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          echo "Xcode version: $(xcodebuild -version)"
-
-      - name: List available destinations
-        run: |
-          xcodebuild -scheme "HelloWorld" -sdk iphoneos -showdestinations
-
-      - name: Build for iOS (no code signing)
-        run: |
-          xcodebuild \
-            -scheme "HelloWorld" \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            -derivedDataPath ./build \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            OTHER_CODE_SIGN_FLAGS="" \
-            SWIFT_COMPILATION_MODE=wholemodule \
-            OTHER_SWIFT_FLAGS="-parse-as-library" \
-            build
-
-
       - name: Create unsigned IPA
         run: |
           mkdir -p output
       
-          # Ищем .app в указанной папке сборки
-          APP_PATH=$(find ./build -name "*.app" -type d | head -1)
+          # Полный путь к собранному приложению
+          APP_PATH="/Users/runner/work/helloworld-ios/helloworld-ios/build/Build/Products/Release-iphoneos/HelloWorld"
       
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: .app file not found in ./build"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Error: .app file not found at $APP_PATH"
             exit 1
           fi
       
-          APP_NAME=$(basename "$APP_PATH" .app)
+          # Имя приложения без расширения
+          APP_NAME="HelloWorld"
+      
+          # Создаём структуру IPA: Payload/HelloWorld.app
           PAYLOAD_DIR="output/Payload"
           mkdir -p "$PAYLOAD_DIR"
           cp -R "$APP_PATH" "$PAYLOAD_DIR/"
       
+          # Архивируем в IPA
           cd output
           zip -r "../${APP_NAME}.ipa" Payload/
           cd ..
+      
+          echo "✅ IPA created: ${APP_NAME}.ipa"
 
-
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-ipa
-          path: |
-            *.ipa
-          retention-days: 7
