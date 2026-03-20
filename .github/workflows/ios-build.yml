@@ -19,11 +19,16 @@ jobs:
           sudo xcode-select -s /Applications/Xcode.app
           echo "Xcode version: $(xcodebuild -version)"
 
+      - name: List available destinations
+        run: |
+          xcodebuild -scheme "HelloWorld" -sdk iphoneos -showdestinations
+
       - name: Build for iOS (no code signing)
         run: |
           xcodebuild \
             -scheme "HelloWorld" \
             -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -configuration Release \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
