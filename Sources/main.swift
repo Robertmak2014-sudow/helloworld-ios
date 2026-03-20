@@ -3,16 +3,10 @@ import UIKit
 // Основной класс приложения
 class AppDelegate: UIResponder, UIApplicationDelegate, UITextFieldDelegate {
     var window: UIWindow?
-    
-    private var messagesLabel = UILabel()
-    private var messageTextField = UITextField()
-    private var scrollView = UIScrollView()
-    private var refreshTimer: Timer?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
         let rootViewController = ViewController()
-        rootViewController.delegate = self
         window?.rootViewController = rootViewController
         window?.makeKeyAndVisible()
         return true
@@ -21,7 +15,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UITextFieldDelegate {
 
 // Контроллер экрана
 class ViewController: UIViewController {
-    weak var delegate: AppDelegate?
+    private var messagesLabel = UILabel()
+    private var messageTextField = UITextField()
+    private var scrollView = UIScrollView()
+    private var refreshTimer: Timer?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -48,7 +45,7 @@ class ViewController: UIViewController {
         messageTextField.borderStyle = .roundedRect
         messageTextField.placeholder = "Введите сообщение..."
         messageTextField.translatesAutoresizingMaskIntoConstraints = false
-        messageTextField.delegate = self  // Устанавливаем делегата
+        messageTextField.delegate = self
         view.addSubview(messageTextField)
 
         // Кнопка отправки
@@ -75,11 +72,11 @@ class ViewController: UIViewController {
             messagesLabel.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -8),
             messagesLabel.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -16),
 
-            // TextField внизу экрана: уменьшенные размеры
+            // TextField внизу экрана
             messageTextField.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             messageTextField.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             messageTextField.heightAnchor.constraint(equalToConstant: 44),
-            messageTextField.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.7),  // 70 % ширины экрана
+            messageTextField.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.7),
 
             // Кнопка справа от TextField
             sendButton.leadingAnchor.constraint(equalTo: messageTextField.trailingAnchor, constant: 8),
@@ -93,34 +90,40 @@ class ViewController: UIViewController {
     // Делегат UITextField: обработка нажатия Enter
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         sendMessage()
-        return true  // Скрываем клавиатуру после отправки
+        return true // Скрываем клавиатуру после отправки
     }
 
     @objc private func sendMessage() {
         guard let text = messageTextField.text, !text.isEmpty else { return }
-        let urlString = "https://jetong.ru/messenger/send.php?text=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)"
-        guard let url = URL(string: urlString) else { return }
 
-        URLSession.shared.dataTask(with: url) { _, _, error in
+        guard var urlComponents = URLComponents(string: "https://jetong.ru/messenger/send.php") else { return }
+        urlComponents.queryItems = [URLQueryItem(name: "text", value: text)]
+
+
+        guard let url = urlComponents.url else { return }
+
+        URLSession.shared.dataTask(with: url) { [weak self] _, _, error in
             DispatchQueue.main.async {
                 if error == nil {
-                    self.messageTextField.text = ""
-            self.loadMessages()
+                    self?.messageTextField.text = ""
+            self?.loadMessages()
         }
     }.resume()
     }
 
     private func loadMessages() {
-        let url = URL(string: "https://jetong.ru/messenger/receive.php")!
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        guard let url = URL(string: "https://jetong.ru/messenger/receive.php") else { return }
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let data = data, error == nil else { return }
             DispatchQueue.main.async {
-                if let data = data, let string = String(data: data, encoding: .utf8) {
+                if let string = String(data: data, encoding: .utf8) {
                     let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
             let formattedMessages = messages.map { "• \($0)" }.joined(separator: "\n")
-            self.messagesLabel.text = formattedMessages
+            self?.messagesLabel.text = formattedMessages
             // Прокрутка вниз к последнему сообщению
-            let bottomOffset = CGPoint(x: 0, y: max(self.messagesLabel.frame.size.height - self.scrollView.frame.size.height, 0))
-            self.scrollView.setContentOffset(bottomOffset, animated: true)
+            let bottomOffset = CGPoint(x: 0, y: max(self?.messagesLabel.frame.size.height ?? 0 - self?.scrollView.frame.size.height ?? 0, 0))
+            self?.scrollView.setContentOffset(bottomOffset, animated: true)
         }
     }.resume()
     }
@@ -136,7 +139,8 @@ class ViewController: UIViewController {
 @main
 struct AppEntryPoint {
     static func main() {
-        UIApplication.shared.delegate = AppDelegate()
+        let appDelegate = AppDelegate()
+        UIApplication.shared.delegate = appDelegate
         _ = UIApplicationMain(
             CommandLine.argc,
             CommandLine.unsafeArgv,
