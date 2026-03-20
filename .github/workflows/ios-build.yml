@@ -34,20 +34,60 @@ jobs:
             OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
-      - name: Package full build output as artifact
+      - name: Create unsigned IPA from binary with proper Info.plist
         run: |
-          mkdir -p build-artifact
-          cp -R ./build/* build-artifact/ || echo "No files in ./build, continuing..."
-          if [ -z "$(ls -A build-artifact)" ]; then
-            echo "Build folder is empty, copying all project files..."
-            cp -R ./* build-artifact/ 2>/dev/null || echo "Could not copy project files"
+          mkdir -p output
+          BINARY_PATH="./build/Build/Products/Release-iphoneos/HelloWorld"
+          APP_NAME="HelloWorld"
+          BUNDLE_DIR="output/Payload/${APP_NAME}.app"
+          mkdir -p "$BUNDLE_DIR"
+          cp "$BINARY_PATH" "$BUNDLE_DIR/${APP_NAME}"
+          INFO_PLIST_SOURCE=""
+          TEMP_APP=$(find ./build -name "*.app" -type d | head -1)
+          if [ -n "$TEMP_APP" ] && [ -f "$TEMP_APP/Info.plist" ]; then
+            INFO_PLIST_SOURCE="$TEMP_APP/Info.plist"
+            echo "Found Info.plist in temporary bundle: $INFO_PLIST_SOURCE"
           fi
-          echo "✅ Full build output packaged in build-artifact/"
+          if [ -z "$INFO_PLIST_SOURCE" ] && [ -f "HelloWorld/Info.plist" ]; then
+            INFO_PLIST_SOURCE="HelloWorld/Info.plist"
+            echo "Found Info.plist in project: $INFO_PLIST_SOURCE"
+          fi
+          if [ -z "$INFO_PLIST_SOURCE" ]; then
+            echo "No Info.plist found, creating minimal one..."
+            cat > "$BUNDLE_DIR/Info.plist" << EOF
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>CFBundleExecutable</key>
+                <string>${APP_NAME}</string>
+                <key>CFBundleIdentifier</key>
+                <string>com.yourcompany.${APP_NAME}</string>
+                <key>CFBundleName</key>
+                <string>${APP_NAME}</string>
+                <key>CFBundlePackageType</key>
+                <string>APPL</string>
+                <key>CFBundleShortVersionString</key>
+                <string>1.0</string>
+                <key>CFBundleVersion</key>
+                <string>1</string>
+                <key>MinimumOSVersion</key>
+                <string>11.0</string>
+            </dict>
+            </plist>
+            EOF
+          else
+            cp "$INFO_PLIST_SOURCE" "$BUNDLE_DIR/Info.plist"
+          fi
+          cd output
+          zip -r "../${APP_NAME}.ipa" Payload/
+          cd ..
+          echo "✅ IPA created: ${APP_NAME}.ipa"
 
-      - name: Upload full build artifact
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: full-build-output
+          name: unsigned-ipa
           path: |
-            build-artifact/
+            *.ipa
           retention-days: 7
