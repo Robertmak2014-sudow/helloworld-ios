@@ -1,4 +1,4 @@
-name: Build iOS App for iPhone 14 Pro Max
+name: Build IPA for Jailbreak Device
 
 on:
   push:
@@ -7,9 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  build-ios:
-    runs-on: macos-latest  # Обязательно macOS — для сборки iOS
-
+  build-ipa:
+    runs-on: macos-latest
 
     steps:
       - name: Checkout code
@@ -19,31 +18,45 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode.app
           echo "Xcode version: $(xcodebuild -version)"
-      - name: Ensure device is trusted
-        run: |
-          # Проверяем подключённые устройства (для диагностики)
-          system_profiler SPUSBDataType | grep -A 5 -B 5 "iPhone"
-      - name: Build for iPhone 14 Pro Max (real device)
-        env:
-          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
-          SDKROOT: iphoneos
+
+      - name: Build for iOS (no code signing)
         run: |
           xcodebuild \
-            -scheme HelloWorld \
+            -scheme "HelloWorld" \  # Замените на имя вашей схемы
             -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            build \
-          # Пояснения к параметрам:
-          # -scheme HelloWorld — схема сборки из вашего проекта
-          # -sdk iphoneos — сборка для реальных устройств iOS (не симуляторов)
-          # -destination "generic/platform=iOS" — любой подключённый iPhone
-          # build — только сборка, без установки/запуска
-      - name: Archive build artifacts
-        if: success()
+            -configuration Release \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            OTHER_CODE_SIGN_FLAGS="" \
+            build
+
+      - name: Create unsigned IPA
+        run: |
+          # Создаём папку для IPA
+          mkdir -p output
+
+          # Находим собранное приложение (.app)
+          APP_PATH=$(find DerivedData -name "*.app" -type d | head -1)
+
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: .app file not found"
+            exit 1
+          fi
+
+          # Копируем .app в Payload
+          PAYLOAD_DIR="output/Payload"
+          mkdir -p "$PAYLOAD_DIR"
+          cp -R "$APP_PATH" "$PAYLOAD_DIR/"
+
+          # Архивируем в IPA
+          cd output
+          zip -r "../${APP_NAME:-MyApp}.ipa" Payload/
+          cd ..
+
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iOS-Build-Artifacts
+          name: unsigned-ipa
           path: |
-            DerivedData/Build/Products/Debug-iphoneos/
-            # Или укажите точный путь, если он отличается
+            *.ipa
           retention-days: 7
