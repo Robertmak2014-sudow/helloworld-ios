@@ -33,7 +33,10 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             OTHER_CODE_SIGN_FLAGS="" \
+            SWIFT_COMPILATION_MODE=wholemodule \
+            OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
+
 
       - name: Create unsigned IPA
         run: |
