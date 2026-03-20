@@ -1,4 +1,4 @@
-name: Build IPA for Jailbreak Device
+name: Create IPA from Binary and Info.plist
 
 on:
   push:
@@ -7,81 +7,52 @@ on:
     branches: [ main ]
 
 jobs:
-  build-ipa:
+  create-ipa:
     runs-on: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Select Xcode version
+      - name: Create .app bundle and IPA
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          echo "Xcode version: $(xcodebuild -version)"
-
-      - name: Build for iOS (no code signing)
-        run: |
-          xcodebuild \
-            -scheme "HelloWorld" \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            -derivedDataPath ./build \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            OTHER_CODE_SIGN_FLAGS="" \
-            SWIFT_COMPILATION_MODE=wholemodule \
-            OTHER_SWIFT_FLAGS="-parse-as-library" \
-            build
-
-      - name: Create unsigned IPA from binary with proper Info.plist
-        run: |
+          # Создаём папку для вывода
           mkdir -p output
-          BINARY_PATH="./build/Build/Products/Release-iphoneos/HelloWorld"
+
+          # Пути к файлам (в корне репозитория)
+          BINARY_PATH="./HelloWorld"
+          INFO_PLIST_SOURCE="./Info.plist"
           APP_NAME="HelloWorld"
           BUNDLE_DIR="output/Payload/${APP_NAME}.app"
+
+          # Проверяем существование бинарника
+          if [ ! -f "$BINARY_PATH" ]; then
+            echo "Error: Binary not found at $BINARY_PATH"
+            echo "Please make sure the binary file 'HelloWorld' is in the project root"
+            exit 1
+          fi
+
+          # Проверяем существование Info.plist
+          if [ ! -f "$INFO_PLIST_SOURCE" ]; then
+            echo "Error: Info.plist not found at $INFO_PLIST_SOURCE"
+            echo "Please create and commit Info.plist in the project root"
+            exit 1
+          fi
+
+          # Создаём структуру .app-bundle
           mkdir -p "$BUNDLE_DIR"
+
+          # Копируем бинарник в bundle (с именем исполняемого файла)
           cp "$BINARY_PATH" "$BUNDLE_DIR/${APP_NAME}"
-          INFO_PLIST_SOURCE=""
-          TEMP_APP=$(find ./build -name "*.app" -type d | head -1)
-          if [ -n "$TEMP_APP" ] && [ -f "$TEMP_APP/Info.plist" ]; then
-            INFO_PLIST_SOURCE="$TEMP_APP/Info.plist"
-            echo "Found Info.plist in temporary bundle: $INFO_PLIST_SOURCE"
-          fi
-          if [ -z "$INFO_PLIST_SOURCE" ] && [ -f "HelloWorld/Info.plist" ]; then
-            INFO_PLIST_SOURCE="HelloWorld/Info.plist"
-            echo "Found Info.plist in project: $INFO_PLIST_SOURCE"
-          fi
-          if [ -z "$INFO_PLIST_SOURCE" ]; then
-            echo "No Info.plist found, creating minimal one..."
-            cat > "$BUNDLE_DIR/Info.plist" << EOF
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>CFBundleExecutable</key>
-                <string>${APP_NAME}</string>
-                <key>CFBundleIdentifier</key>
-                <string>com.yourcompany.${APP_NAME}</string>
-                <key>CFBundleName</key>
-                <string>${APP_NAME}</string>
-                <key>CFBundlePackageType</key>
-                <string>APPL</string>
-                <key>CFBundleShortVersionString</key>
-                <string>1.0</string>
-                <key>CFBundleVersion</key>
-                <string>1</string>
-                <key>MinimumOSVersion</key>
-                <string>11.0</string>
-            </dict>
-            </plist>
-            EOF
-          else
-            cp "$INFO_PLIST_SOURCE" "$BUNDLE_DIR/Info.plist"
-          fi
+
+          # Копируем Info.plist в bundle
+          cp "$INFO_PLIST_SOURCE" "$BUNDLE_DIR/Info.plist"
+
+          # Упаковываем в IPA
           cd output
           zip -r "../${APP_NAME}.ipa" Payload/
           cd ..
+
           echo "✅ IPA created: ${APP_NAME}.ipa"
 
       - name: Upload IPA artifact
