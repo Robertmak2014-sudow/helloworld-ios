@@ -11,44 +11,79 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Select Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          echo "Xcode version: $(xcodebuild -version)"
+
+      - name: Debug: Show Repository Structure
+        run: |
+          echo "=== Current directory: $(pwd) ==="
+          echo "=== Repository contents ==="
+          ls -la
+          echo ""
+          echo "=== Looking for Xcode project files ==="
+          find . -name "*.xcodeproj" -o -name "*.xcworkspace" 2>/dev/null || echo "No Xcode project files found"
+
+      - name: Build for iOS (no code signing)
+        run: |
+          # Если проект не в корне, раскомментируйте и укажите правильный путь:
+          # cd path/to/your/project
+
+          xcodebuild \
+            -scheme "HelloWorld" \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            OTHER_CODE_SIGN_FLAGS="" \
+            SWIFT_COMPILATION_MODE=wholemodule \
+            OTHER_SWIFT_FLAGS="-parse-as-library" \
+            build
 
       - name: Create unsigned IPA
         run: |
           mkdir -p output
-      
-          # Получаем точный путь к продуктам сборки
+
+          # Получаем путь к продуктам сборки
           BUILD_DIR=$(xcodebuild -scheme "HelloWorld" -showBuildSettings | grep BUILT_PRODUCTS_DIR | head -1 | cut -d ' ' -f3-)
-      
-      
+
           if [ -z "$BUILD_DIR" ]; then
             echo "Error: Could not determine BUILT_PRODUCTS_DIR"
             exit 1
           fi
-      
-          echo "Build products directory: $BUILD_DIR"
-      
-          # Ищем .app-bundle в этой папке
+
+          echo "Build directory: $BUILD_DIR"
+
+          # Ищем .app-bundle
           APP_PATH=$(find "$BUILD_DIR" -name "*.app" -type d | head -1)
-      
+
           if [ -z "$APP_PATH" ]; then
             echo "Error: .app bundle not found in $BUILD_DIR"
-            # Выводим содержимое папки для отладки
-            ls -la "$BUILD_DIR" 2>/dev/null || echo "Directory is empty or does not exist"
+            ls -la "$BUILD_DIR" 2>/dev/null || echo "Directory not accessible"
             exit 1
           fi
-      
+
           APP_NAME=$(basename "$APP_PATH" .app)
           PAYLOAD_DIR="output/Payload"
           mkdir -p "$PAYLOAD_DIR"
           cp -R "$APP_PATH" "$PAYLOAD_DIR/"
-      
+
           cd output
           zip -r "../${APP_NAME}.ipa" Payload/
           cd ..
-      
+
           echo "✅ IPA created: ${APP_NAME}.ipa"
 
-        
-
-
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-ipa
+          path: |
+            *.ipa
+          retention-days: 7
