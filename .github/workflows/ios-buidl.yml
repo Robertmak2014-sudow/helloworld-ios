@@ -29,24 +29,9 @@ jobs:
             OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
-      - name: Select Xcode version
-        run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          echo "Xcode version: $(xcodebuild -version)"
 
-      - name: Build for iOS (no code signing)
-        run: |
-          xcodebuild \
-            -project "HelloWorld.xcodeproj" \
-            -scheme "HelloWorld" \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            -derivedDataPath ./build \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            OTHER_CODE_SIGN_FLAGS="" \
-            build
+
+
 
       - name: Create ZIP archive of project folder
         run: |
