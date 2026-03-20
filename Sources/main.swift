@@ -85,28 +85,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let urlString = "https://jetong.ru/messenger/send.php?text=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)"
         guard let url = URL(string: urlString) else { return }
 
-        URLSession.shared.dataTask(with: url) { _, _, error in
+        URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 if error == nil {
                     self.messageTextField.text = ""
             self.loadMessages()
-        }
-    }.resume()
+                }
+            }
+        }.resume()
     }
 
     private func loadMessages() {
         let url = URL(string: "https://jetong.ru/messenger/receive.php")!
-        URLSession.shared.dataTask(with: url) { data, _, error in
+        URLSession.shared.dataTask(with: url) { data, response, error in
             DispatchQueue.main.async {
                 if let data = data, let string = String(data: data, encoding: .utf8) {
                     let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
             let formattedMessages = messages.map { "• \($0)" }.joined(separator: "\n")
             self.messagesLabel.text = formattedMessages
             // Прокрутка вниз к последнему сообщению
-            let bottomOffset = CGPoint(x: 0, y: self.messagesLabel.frame.size.height - self.scrollView.frame.size.height)
+            let bottomOffset = CGPoint(x: 0, y: max(self.messagesLabel.frame.size.height - self.scrollView.frame.size.height, 0))
             self.scrollView.setContentOffset(bottomOffset, animated: true)
-        }
-    }.resume()
+                }
+            }
+        }.resume()
     }
 
     private func startAutoRefresh() {
