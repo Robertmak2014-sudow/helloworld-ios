@@ -3,7 +3,7 @@ import UIKit
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
-    
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = ViewController()
@@ -13,11 +13,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 class ViewController: UIViewController, UITextFieldDelegate {
+
     private var messagesLabel: UILabel!
     private var messageTextField: UITextField!
     private var scrollView: UIScrollView!
     private var refreshTimer: Timer?
-    
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -90,7 +90,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
     }
 
     // Делегат UITextField: обработка нажатия Enter
-    @objc func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         sendMessage()
         return true // Скрываем клавиатуру после отправки
     }
@@ -101,25 +101,27 @@ class ViewController: UIViewController, UITextFieldDelegate {
         guard var urlComponents = URLComponents(string: "https://jetong.ru/messenger/send.php") else { return }
         urlComponents.queryItems = [URLQueryItem(name: "text", value: text)]
 
+
         guard let url = urlComponents.url else { return }
 
-        URLSession.shared.dataTask(with: url) { [weak self] _, _, error in
+        let task = URLSession.shared.dataTask(with: url) { [weak self] _, _, error in
             DispatchQueue.main.async {
                 if error == nil {
                     self?.messageTextField.text = ""
             self?.loadMessages()
         }
-    }.resume()
+    }
+        task.resume()
     }
 
     private func loadMessages() {
         guard let url = URL(string: "https://jetong.ru/messenger/receive.php") else { return }
 
-        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+        let task = URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
             guard let data = data, error == nil else { return }
             DispatchQueue.main.async {
                 if let string = String(data: data, encoding: .utf8) {
-            let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
+                    let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
             let formattedMessages = messages.map { "• \($0)" }.joined(separator: "\n")
             self?.messagesLabel.text = formattedMessages
             // Прокрутка к последнему сообщению
@@ -129,7 +131,8 @@ class ViewController: UIViewController, UITextFieldDelegate {
                 self?.scrollView.setContentOffset(bottomOffset, animated: true)
             }
         }
-    }.resume()
+    }
+        task.resume()
     }
 
     private func startAutoRefresh() {
