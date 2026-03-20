@@ -5,7 +5,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     private var messagesLabel = UILabel()
     private var messageTextField = UITextField()
-    private let refreshTimer: Timer? = nil
+    private var scrollView = UIScrollView()
+    private var refreshTimer: Timer?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let window = UIWindow()
@@ -24,7 +25,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private func setupUI(_ viewController: UIViewController) {
         // Scroll View для сообщений
-        let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         viewController.view.addSubview(scrollView)
 
@@ -110,8 +110,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     private func startAutoRefresh() {
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            self.loadMessages()
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.loadMessages()
         }
     }
 }
