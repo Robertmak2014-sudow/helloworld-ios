@@ -101,6 +101,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
         guard var urlComponents = URLComponents(string: "https://jetong.ru/messenger/send.php") else { return }
         urlComponents.queryItems = [URLQueryItem(name: "text", value: text)]
 
+
         guard let url = urlComponents.url else { return }
 
         let task = URLSession.shared.dataTask(with: url) { [weak self] _, _, error in
@@ -120,7 +121,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
             guard let data = data, error == nil else { return }
             DispatchQueue.main.async {
                 if let string = String(data: data, encoding: .utf8) {
-                    let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
+            let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
             let formattedMessages = messages.map { "• \($0)" }.joined(separator: "\n")
             self?.messagesLabel.text = formattedMessages
             // Прокрутка к последнему сообщению
