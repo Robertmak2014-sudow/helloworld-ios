@@ -1,4 +1,4 @@
-name: Build iOS App
+name: Build iOS App (Fixed)
 
 on:
   push:
@@ -13,23 +13,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Xcode
+      - name: Set up Swift
         run: |
-          # Устанавливаем последнюю версию Xcode
-          echo "Using latest Xcode version"
+          echo "Using system Swift"
 
-      - name: Create Xcode project from Swift Package
+      - name: Generate Xcode project
         run: |
           swift package generate-xcodeproj
 
+      - name: List generated files (debug)
+        run: |
+          ls -la
+          ls -la *.xcodeproj
+
       - name: Build iOS app
         run: |
-          xcodebuild -project HelloWorld.xcodeproj \
+          xcodebuild \
+            -project HelloWorld.xcodeproj \
             -scheme HelloWorld \
             -destination "platform=iOS Simulator,name=iPhone 15" \
             build
 
-      - name: Upload .app as artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: HelloWorld-app
