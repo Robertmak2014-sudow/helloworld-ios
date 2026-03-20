@@ -16,8 +16,18 @@ jobs:
 
       - name: Generate Xcode project from Swift Package
         run: |
-          swift package generate-xcodeproj
-          echo "Xcode project generated: HelloWorld.xcodeproj"
+          xcodebuild \
+            -scheme "HelloWorld" \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            OTHER_CODE_SIGN_FLAGS="" \
+            SWIFT_COMPILATION_MODE=wholemodule \
+            OTHER_SWIFT_FLAGS="-parse-as-library" \
+            build
 
       - name: Select Xcode version
         run: |
