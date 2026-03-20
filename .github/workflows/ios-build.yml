@@ -22,7 +22,7 @@ jobs:
       - name: Build for iOS (no code signing)
         run: |
           xcodebuild \
-            -scheme "HelloWorld" \  # Замените на имя вашей схемы
+            -scheme "HelloWorld" \
             -sdk iphoneos \
             -configuration Release \
             CODE_SIGNING_REQUIRED=NO \
@@ -43,6 +43,9 @@ jobs:
             exit 1
           fi
 
+          # Получаем имя приложения из пути
+          APP_NAME=$(basename "$APP_PATH" .app)
+
           # Копируем .app в Payload
           PAYLOAD_DIR="output/Payload"
           mkdir -p "$PAYLOAD_DIR"
@@ -50,7 +53,7 @@ jobs:
 
           # Архивируем в IPA
           cd output
-          zip -r "../${APP_NAME:-MyApp}.ipa" Payload/
+          zip -r "../${APP_NAME}.ipa" Payload/
           cd ..
 
       - name: Upload IPA artifact
