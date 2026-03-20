@@ -11,11 +11,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - name: debug
-        run: |
-          echo "=== Contents of ./build/Build/Products ==="
-          find ./build/Build/Products -type d -name "*.app"
-          ls -la ./build/Build/Products/Release-iphoneos/
+      
 
       - name: Create unsigned IPA
         run: |
