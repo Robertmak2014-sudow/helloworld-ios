@@ -101,7 +101,6 @@ class ViewController: UIViewController, UITextFieldDelegate {
         guard var urlComponents = URLComponents(string: "https://jetong.ru/messenger/send.php") else { return }
         urlComponents.queryItems = [URLQueryItem(name: "text", value: text)]
 
-
         guard let url = urlComponents.url else { return }
 
         let task = URLSession.shared.dataTask(with: url) { [weak self] _, _, error in
