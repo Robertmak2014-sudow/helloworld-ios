@@ -3,7 +3,9 @@ import UIKit
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
-    private var clickCount = 0
+    private var messagesLabel = UILabel()
+    private var messageTextField = UITextField()
+    private let refreshTimer: Timer? = nil
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         let window = UIWindow()
@@ -12,43 +14,104 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let rootViewController = UIViewController()
         rootViewController.view.backgroundColor = .white
 
-        // Создаём метку для отображения счёта
-        let countLabel = UILabel()
-        countLabel.text = "0"
-        countLabel.textColor = .black
-        countLabel.textAlignment = .center
-        countLabel.font = UIFont.systemFont(ofSize: 48, weight: .bold)
-        countLabel.frame = CGRect(x: 0, y: 200, width: 300, height: 60)
-        rootViewController.view.addSubview(countLabel)
-
-        // Создаём кнопку клика
-        let clickButton = UIButton(type: .system)
-        clickButton.setTitle("CLICK ME!", for: .normal)
-        clickButton.titleLabel?.font = UIFont.systemFont(ofSize: 24, weight: .semibold)
-        clickButton.backgroundColor = .systemBlue
-        clickButton.layer.cornerRadius = 12
-        clickButton.frame = CGRect(x: 100, y: 300, width: 200, height: 60)
-
-        // Обработчик нажатия кнопки
-        clickButton.addTarget(self, action: #selector(handleClick), for: .touchUpInside)
-        rootViewController.view.addSubview(clickButton)
+        setupUI(rootViewController)
+        startAutoRefresh()
 
         window.rootViewController = rootViewController
         window.makeKeyAndVisible()
-
         return true
     }
 
-    @objc private func handleClick() {
-        clickCount += 1
-        if let countLabel = window?.rootViewController?.view.subviews.first(where: { $0 is UILabel }) as? UILabel {
-            countLabel.text = "\(clickCount)"
-            // Меняем цвет при достижении 10 кликов
-            if clickCount >= 10 {
-                countLabel.textColor = .green
-            }
+    private func setupUI(_ viewController: UIViewController) {
+        // Scroll View для сообщений
+        let scrollView = UIScrollView()
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        viewController.view.addSubview(scrollView)
+
+        // Label для сообщений
+        messagesLabel.numberOfLines = 0
+        messagesLabel.textAlignment = .left
+        messagesLabel.font = UIFont.systemFont(ofSize: 16)
+        messagesLabel.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(messagesLabel)
+
+        // Text Field для ввода
+        messageTextField.borderStyle = .roundedRect
+        messageTextField.placeholder = "Введите сообщение..."
+        messageTextField.translatesAutoresizingMaskIntoConstraints = false
+        viewController.view.addSubview(messageTextField)
+
+        // Кнопка «Отправить»
+        let sendButton = UIButton(type: .system)
+        sendButton.setTitle("Отправить", for: .normal)
+        sendButton.layer.cornerRadius = 8
+        sendButton.translatesAutoresizingMaskIntoConstraints = false
+        viewController.view.addSubview(sendButton)
+
+        // Обработчик нажатия кнопки
+        sendButton.addTarget(self, action: #selector(sendMessage), for: .touchUpInside)
+
+        // Настройка Auto Layout
+        NSLayoutConstraint.activate([
+            // ScrollView занимает верхнюю часть экрана
+            scrollView.topAnchor.constraint(equalTo: viewController.view.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: messageTextField.topAnchor, constant: -8),
+
+            // Messages Label внутри ScrollView
+            messagesLabel.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 8),
+            messagesLabel.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 8),
+            messagesLabel.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -8),
+            messagesLabel.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor, constant: -8),
+            messagesLabel.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -16),
+
+            // TextField слева
+            messageTextField.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor, constant: 8),
+            messageTextField.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            messageTextField.heightAnchor.constraint(equalToConstant: 40),
+
+            // Кнопка справа от TextField
+            sendButton.leadingAnchor.constraint(equalTo: messageTextField.trailingAnchor, constant: 8),
+            sendButton.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor, constant: -8),
+            sendButton.centerYAnchor.constraint(equalTo: messageTextField.centerYAnchor),
+            sendButton.widthAnchor.constraint(equalToConstant: 80),
+            sendButton.heightAnchor.constraint(equalToConstant: 40)
+        ])
+    }
+
+    @objc private func sendMessage() {
+        guard let text = messageTextField.text, !text.isEmpty else { return }
+        let urlString = "https://jetong.ru/messenger/send.php?text=\(text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!)"
+        guard let url = URL(string: urlString) else { return }
+
+        URLSession.shared.dataTask(with: url) { _, _, error in
+            DispatchQueue.main.async {
+                if error == nil {
+                    self.messageTextField.text = ""
+            self.loadMessages()
         }
-        // Лёгкая вибрация при клике
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }.resume()
+    }
+
+    private func loadMessages() {
+        let url = URL(string: "https://jetong.ru/messenger/receive.php")!
+        URLSession.shared.dataTask(with: url) { data, _, error in
+            DispatchQueue.main.async {
+                if let data = data, let string = String(data: data, encoding: .utf8) {
+                    let messages = string.components(separatedBy: "\n").filter { !$0.isEmpty }
+            let formattedMessages = messages.map { "• \($0)" }.joined(separator: "\n")
+            self.messagesLabel.text = formattedMessages
+            // Прокрутка вниз к последнему сообщению
+            let bottomOffset = CGPoint(x: 0, y: self.messagesLabel.frame.size.height - self.scrollView.frame.size.height)
+            self.scrollView.setContentOffset(bottomOffset, animated: true)
+        }
+    }.resume()
+    }
+
+    private func startAutoRefresh() {
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            self.loadMessages()
+        }
     }
 }
