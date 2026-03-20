@@ -21,19 +21,24 @@ jobs:
         run: |
           mkdir -p output
       
-          # Получаем путь к продуктам сборки
+          # Получаем точный путь к продуктам сборки
           BUILD_DIR=$(xcodebuild -scheme "HelloWorld" -showBuildSettings | grep BUILT_PRODUCTS_DIR | head -1 | cut -d ' ' -f3-)
+      
       
           if [ -z "$BUILD_DIR" ]; then
             echo "Error: Could not determine BUILT_PRODUCTS_DIR"
             exit 1
           fi
       
-          # Ищем .app в этой директории
+          echo "Build products directory: $BUILD_DIR"
+      
+          # Ищем .app-bundle в этой папке
           APP_PATH=$(find "$BUILD_DIR" -name "*.app" -type d | head -1)
       
           if [ -z "$APP_PATH" ]; then
             echo "Error: .app bundle not found in $BUILD_DIR"
+            # Выводим содержимое папки для отладки
+            ls -la "$BUILD_DIR" 2>/dev/null || echo "Directory is empty or does not exist"
             exit 1
           fi
       
@@ -47,6 +52,7 @@ jobs:
           cd ..
       
           echo "✅ IPA created: ${APP_NAME}.ipa"
+
         
 
 
