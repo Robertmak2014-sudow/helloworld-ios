@@ -1,64 +1,54 @@
-name: Create IPA from Binary and Info.plist
+name: Build and Archive Project Folder
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  create-ipa:
+  build-and-zip:
     runs-on: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .app bundle and IPA
+      - name: Generate Xcode project from Swift Package
         run: |
-          # Создаём папку для вывода
-          mkdir -p output
+          swift package generate-xcodeproj
+          echo "Xcode project generated: HelloWorld.xcodeproj"
 
-          # Пути к файлам (в корне репозитория)
-          BINARY_PATH="./HelloWorld"
-          INFO_PLIST_SOURCE="./Info.plist"
-          APP_NAME="HelloWorld"
-          BUNDLE_DIR="output/Payload/${APP_NAME}.app"
+      - name: Select Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app
+          echo "Xcode version: $(xcodebuild -version)"
 
-          # Проверяем существование бинарника
-          if [ ! -f "$BINARY_PATH" ]; then
-            echo "Error: Binary not found at $BINARY_PATH"
-            echo "Please make sure the binary file 'HelloWorld' is in the project root"
-            exit 1
-          fi
+      - name: Build for iOS (no code signing)
+        run: |
+          xcodebuild \
+            -project "HelloWorld.xcodeproj" \
+            -scheme "HelloWorld" \
+            -sdk iphoneos \
+            -destination "generic/platform=iOS" \
+            -configuration Release \
+            -derivedDataPath ./build \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            OTHER_CODE_SIGN_FLAGS="" \
+            build
 
-          # Проверяем существование Info.plist
-          if [ ! -f "$INFO_PLIST_SOURCE" ]; then
-            echo "Error: Info.plist not found at $INFO_PLIST_SOURCE"
-            echo "Please create and commit Info.plist in the project root"
-            exit 1
-          fi
+      - name: Create ZIP archive of project folder
+        run: |
+          # Создаём ZIP-архив всей текущей папки (исключая .git и build)
+          zip -r project-archive.zip . \
+            -x ".git/*" \
+            -x "*.zip"
+          echo "✅ ZIP archive created: project-archive.zip"
 
-          # Создаём структуру .app-bundle
-          mkdir -p "$BUNDLE_DIR"
-
-          # Копируем бинарник в bundle (с именем исполняемого файла)
-          cp "$BINARY_PATH" "$BUNDLE_DIR/${APP_NAME}"
-
-          # Копируем Info.plist в bundle
-          cp "$INFO_PLIST_SOURCE" "$BUNDLE_DIR/Info.plist"
-
-          # Упаковываем в IPA
-          cd output
-          zip -r "../${APP_NAME}.ipa" Payload/
-          cd ..
-
-          echo "✅ IPA created: ${APP_NAME}.ipa"
-
-      - name: Upload IPA artifact
+      - name: Upload project archive as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: unsigned-ipa
-          path: |
-            *.ipa
+          name: project-source-code
+          path: project-archive.zip
           retention-days: 7
