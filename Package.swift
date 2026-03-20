@@ -1,4 +1,4 @@
-// swift-tools-version:5.7
+// swift-tools-version:5.8
 import PackageDescription
 
 let package = Package(
@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "HelloWorld", targets: ["HelloWorld"])
     ],
     targets: [
-        .target(
+        .executableTarget(
             name: "HelloWorld",
             path: "Sources"
         )
