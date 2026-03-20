@@ -1,73 +1,20 @@
-name: Build IPA for Jailbreak Device
+- name: Create unsigned IPA
+  run: |
+    mkdir -p output
 
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    # Ищем .app в стандартном месте DerivedData
+    APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "*.app" -type d 2>/dev/null | head -1)
 
-jobs:
-  build-ipa:
-    runs-on: macos-latest
+    if [ -z "$APP_PATH" ]; then
+      echo "Error: .app file not found in DerivedData"
+      exit 1
+    fi
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    APP_NAME=$(basename "$APP_PATH" .app)
+    PAYLOAD_DIR="output/Payload"
+    mkdir -p "$PAYLOAD_DIR"
+    cp -R "$APP_PATH" "$PAYLOAD_DIR/"
 
-      - name: Select Xcode version
-        run: |
-          sudo xcode-select -s /Applications/Xcode.app
-          echo "Xcode version: $(xcodebuild -version)"
-
-      - name: List available destinations
-        run: |
-          xcodebuild -scheme "HelloWorld" -sdk iphoneos -showdestinations
-
-      - name: Build for iOS (no code signing)
-        run: |
-          xcodebuild \
-            -scheme "HelloWorld" \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            -configuration Release \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            OTHER_CODE_SIGN_FLAGS="" \
-            SWIFT_COMPILATION_MODE=wholemodule \
-            OTHER_SWIFT_FLAGS="-parse-as-library" \
-            build
-
-
-      - name: Create unsigned IPA
-        run: |
-          # Создаём папку для IPA
-          mkdir -p output
-
-          # Находим собранное приложение (.app)
-          APP_PATH=$(find DerivedData -name "*.app" -type d | head -1)
-
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: .app file not found"
-            exit 1
-          fi
-
-          # Получаем имя приложения из пути
-          APP_NAME=$(basename "$APP_PATH" .app)
-
-          # Копируем .app в Payload
-          PAYLOAD_DIR="output/Payload"
-          mkdir -p "$PAYLOAD_DIR"
-          cp -R "$APP_PATH" "$PAYLOAD_DIR/"
-
-          # Архивируем в IPA
-          cd output
-          zip -r "../${APP_NAME}.ipa" Payload/
-          cd ..
-
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-ipa
-          path: |
-            *.ipa
-          retention-days: 7
+    cd output
+    zip -r "../${APP_NAME}.ipa" Payload/
+    cd ..
