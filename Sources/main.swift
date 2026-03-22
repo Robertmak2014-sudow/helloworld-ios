@@ -45,14 +45,14 @@ final class TetrisGame {
                     [CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 3, y: 1)],
                     [CellPoint(x: 2, y: 0), CellPoint(x: 2, y: 1), CellPoint(x: 2, y: 2), CellPoint(x: 2, y: 3)]
                 ],
-                color: .systemCyan
+                color: .cyan
             ),
             // O
             Tetromino(
                 rotations: [
                     [CellPoint(x: 1, y: 0), CellPoint(x: 2, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1)]
                 ],
-                color: .systemYellow
+                color: .yellow
             ),
             // T
             Tetromino(
@@ -62,7 +62,7 @@ final class TetrisGame {
                     [CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 1, y: 2)],
                     [CellPoint(x: 1, y: 0), CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1), CellPoint(x: 1, y: 2)]
                 ],
-                color: .systemPurple
+                color: .purple
             ),
             // L
             Tetromino(
@@ -72,7 +72,7 @@ final class TetrisGame {
                     [CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 2, y: 2)],
                     [CellPoint(x: 1, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 0, y: 2), CellPoint(x: 1, y: 2)]
                 ],
-                color: .systemOrange
+                color: .orange
             ),
             // J
             Tetromino(
@@ -82,7 +82,7 @@ final class TetrisGame {
                     [CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 0, y: 2)],
                     [CellPoint(x: 0, y: 0), CellPoint(x: 1, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 1, y: 2)]
                 ],
-                color: .systemBlue
+                color: .blue
             ),
             // S
             Tetromino(
@@ -90,7 +90,7 @@ final class TetrisGame {
                     [CellPoint(x: 1, y: 0), CellPoint(x: 2, y: 0), CellPoint(x: 0, y: 1), CellPoint(x: 1, y: 1)],
                     [CellPoint(x: 1, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 2, y: 2)]
                 ],
-                color: .systemGreen
+                color: .green
             ),
             // Z
             Tetromino(
@@ -98,7 +98,7 @@ final class TetrisGame {
                     [CellPoint(x: 0, y: 0), CellPoint(x: 1, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1)],
                     [CellPoint(x: 2, y: 0), CellPoint(x: 1, y: 1), CellPoint(x: 2, y: 1), CellPoint(x: 1, y: 2)]
                 ],
-                color: .systemRed
+                color: .red
             )
         ]
 
@@ -317,7 +317,7 @@ final class GameViewController: UIViewController {
         setupLabel(scoreLabel, size: 22)
         setupLabel(linesLabel, size: 18)
         setupLabel(statusLabel, size: 22)
-        statusLabel.textColor = .systemRed
+        statusLabel.textColor = .red
         statusLabel.numberOfLines = 0
 
         setupButton(leftButton, "◀")
@@ -370,29 +370,12 @@ final class GameViewController: UIViewController {
             row2.heightAnchor.constraint(equalToConstant: 56)
         ])
 
-        leftButton.addAction(UIAction { [weak self] _ in
-            _ = self?.game.move(dx: -1, dy: 0)
-        }, for: .touchUpInside)
-
-        rightButton.addAction(UIAction { [weak self] _ in
-            _ = self?.game.move(dx: 1, dy: 0)
-        }, for: .touchUpInside)
-
-        downButton.addAction(UIAction { [weak self] _ in
-            self?.game.stepDown()
-        }, for: .touchUpInside)
-
-        rotateButton.addAction(UIAction { [weak self] _ in
-            self?.game.rotate()
-        }, for: .touchUpInside)
-
-        dropButton.addAction(UIAction { [weak self] _ in
-            self?.game.hardDrop()
-        }, for: .touchUpInside)
-
-        restartButton.addAction(UIAction { [weak self] _ in
-            self?.game.startNewGame()
-        }, for: .touchUpInside)
+        leftButton.addTarget(self, action: #selector(moveLeft), for: .touchUpInside)
+        rightButton.addTarget(self, action: #selector(moveRight), for: .touchUpInside)
+        downButton.addTarget(self, action: #selector(moveDown), for: .touchUpInside)
+        rotateButton.addTarget(self, action: #selector(rotatePiece), for: .touchUpInside)
+        dropButton.addTarget(self, action: #selector(dropPiece), for: .touchUpInside)
+        restartButton.addTarget(self, action: #selector(restartGame), for: .touchUpInside)
 
         let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipeLeft))
         swipeLeft.direction = .left
@@ -438,12 +421,7 @@ final class GameViewController: UIViewController {
 
     func startTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.55, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if !self.game.gameOver {
-                self.game.stepDown()
-            }
-        }
+        timer = Timer.scheduledTimer(timeInterval: 0.55, target: self, selector: #selector(timerTick), userInfo: nil, repeats: true)
     }
 
     func updateUI() {
@@ -451,6 +429,36 @@ final class GameViewController: UIViewController {
         linesLabel.text = "LINES: \(game.lines)"
         statusLabel.text = game.gameOver ? "GAME OVER" : ""
         boardView.setNeedsDisplay()
+    }
+
+    @objc func timerTick() {
+        if !game.gameOver {
+            game.stepDown()
+        }
+    }
+
+    @objc func moveLeft() {
+        _ = game.move(dx: -1, dy: 0)
+    }
+
+    @objc func moveRight() {
+        _ = game.move(dx: 1, dy: 0)
+    }
+
+    @objc func moveDown() {
+        game.stepDown()
+    }
+
+    @objc func rotatePiece() {
+        game.rotate()
+    }
+
+    @objc func dropPiece() {
+        game.hardDrop()
+    }
+
+    @objc func restartGame() {
+        game.startNewGame()
     }
 
     @objc func handleSwipeLeft() {
@@ -487,11 +495,14 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 }
 
-// MARK: - Main
+// MARK: - Main App
 
-UIApplicationMain(
-    CommandLine.argc,
-    CommandLine.unsafeArgv,
-    nil,
-    NSStringFromClass(AppDelegate.self)
-)
+@main
+final class MainApplication: UIApplication, UIApplicationDelegate {
+    private static var appDelegate = AppDelegate()
+
+    override init() {
+        super.init()
+        delegate = Self.appDelegate
+    }
+}
