@@ -21,22 +21,16 @@ jobs:
           echo "\n🗂️  Folder structure:"
           tree -a -I '.git|build' || ls -laR
 
-      - name: Generate Xcode Project from Swift Package
+      - name: Install Xcode Version (Optional)
         run: |
-          swift package generate-xcodeproj
-          echo "✅ Xcode project generated: ClickerApp.xcodeproj"
+          # Проверяем текущую версию Xcode
+          xcodebuild -version
+          # Если нужна конкретная версия, раскомментируйте следующую строку:
+          # sudo xcode-select -s /Applications/Xcode_14.3.app
 
-      - name: List Available Schemes
-        id: list-schemes
-        run: |
-          schemes=$(xcodebuild -project ClickerApp.xcodeproj -list | grep -A 10 "Schemes:" | tail -n +2 | grep -v "^$" | tr -d '[:space:]')
-          echo "schemes=$schemes" >> $GITHUB_OUTPUT
-          echo "Available schemes: $schemes"
-
-      - name: Build with xcodebuild
+      - name: Build with xcodebuild (Generic iOS Device)
         run: |
           xcodebuild \
-            -project ClickerApp.xcodeproj \
             -scheme ClickerApp \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
