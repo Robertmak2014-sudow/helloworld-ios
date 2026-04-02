@@ -36,26 +36,16 @@ jobs:
             OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
-      - name: Create ZIP Archive of Project
+      - name: Create ZIP archive of project folder
         run: |
+          # Создаём ZIP-архив всей текущей папки (исключая .git и build)
           zip -r project-archive.zip . \
             -x ".git/*" \
-            -x "build/*" \
-            -x "*.zip" \
-            -x ".swiftpm/*"
+            -x "*.zip"
           echo "✅ ZIP archive created: project-archive.zip"
-
-      - name: Upload Project Archive as Artifact
+      - name: Upload project archive as artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-source-code
           path: project-archive.zip
-          retention-days: 7
-
-      - name: Upload Build Artifacts (Optional)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-products
-          path: ./build/**
           retention-days: 7
