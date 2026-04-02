@@ -36,6 +36,10 @@ jobs:
             OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
+      - name: cd build
+        run: |
+          cd build
+          echo "Success!"
       - name: Create ZIP archive of project folder
         run: |
           # Создаём ZIP-архив всей текущей папки (исключая .git и build)
