@@ -38,7 +38,7 @@ jobs:
 
       - name: cd build
         run: |
-          cd build
+          cd build\Build\Products\Release-iphoneos
           echo "Success!"
       - name: Create ZIP archive of project folder
         run: |
