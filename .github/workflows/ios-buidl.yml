@@ -14,10 +14,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate Xcode project from Swift Package
+      - name: Verify Package Structure
+        run: |
+          echo "📁 Project structure:"
+          find . -type f \( -name "*.swift" -o -name "Package.swift" \) -exec ls -la {} \;
+          echo "🗂️  Folder structure:"
+          tree -a -I '.git|build' || ls -laR
+
+      - name: Build with Swift Package Manager
+        run: |
+          swift build --configuration release
+          echo "✅ Swift package built successfully"
+
+      - name: Generate Xcode Project (Optional)
+        run: |
+          swift package generate-xcodeproj
+          echo "✅ Xcode project generated: ClickerApp.xcodeproj"
+
+      - name: List Available Schemes
+        run: |
+          if [ -f "ClickerApp.xcodeproj" ]; then
+            xcodebuild -project ClickerApp.xcodeproj -list
+          else
+            echo "No Xcode project found, using SPM build"
+          fi
+
+      - name: Xcode Build (if Xcode project exists)
+        if: success() && contains(steps.list-schemes.outputs.schemes, 'ClickerApp')
         run: |
           xcodebuild \
-            -scheme "HelloWorld" \
+            -project ClickerApp.xcodeproj \
+            -scheme ClickerApp \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
             -configuration Release \
@@ -26,19 +53,16 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             OTHER_CODE_SIGN_FLAGS="" \
             SWIFT_COMPILATION_MODE=wholemodule \
-            OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
-
-
-
-
 
       - name: Create ZIP archive of project folder
         run: |
-          # Создаём ZIP-архив всей текущей папки (исключая .git и build)
+          # Создаём ZIP‑архив всей текущей папки (исключая .git, build и временные файлы)
           zip -r project-archive.zip . \
             -x ".git/*" \
-            -x "*.zip"
+            -x "build/*" \
+            -x "*.zip" \
+            -x ".swiftpm/*"
           echo "✅ ZIP archive created: project-archive.zip"
 
       - name: Upload project archive as artifact
