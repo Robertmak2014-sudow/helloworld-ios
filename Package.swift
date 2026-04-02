@@ -1,18 +1,18 @@
-// swift-tools-version:5.8
+// swift-tools-version:5.3
 import PackageDescription
 
 let package = Package(
-    name: "HelloWorld",
+    name: "ClickerApp",
     platforms: [
-        .iOS(.v14)
+        .iOS(.v12)  // Указываем минимальную версию iOS 12
     ],
     products: [
-        .executable(name: "HelloWorld", targets: ["HelloWorld"])
+        .executable(name: "ClickerApp", targets: ["ClickerApp"])
     ],
     targets: [
-        .executableTarget(
-            name: "HelloWorld",
-            path: "Sources"
+        .target(
+            name: "ClickerApp",
+            dependencies: []
         )
     ]
 )
