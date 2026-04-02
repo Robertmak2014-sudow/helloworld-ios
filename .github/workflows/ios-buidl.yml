@@ -6,9 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+
 jobs:
   build-ios-app:
     runs-on: macos-latest
+
 
     steps:
       - name: Checkout code
@@ -18,17 +20,8 @@ jobs:
         run: |
           echo "📁 Project structure:"
           find . -type f \( -name "*.swift" -o -name "Package.swift" \) -exec ls -la {} \;
-          echo "\n🗂️  Folder structure:"
-          tree -a -I '.git|build' || ls -laR
 
-      - name: Install Xcode Version (Optional)
-        run: |
-          # Проверяем текущую версию Xcode
-          xcodebuild -version
-          # Если нужна конкретная версия, раскомментируйте следующую строку:
-          # sudo xcode-select -s /Applications/Xcode_14.3.app
-
-      - name: Build with xcodebuild (Generic iOS Device)
+      - name: Build with xcodebuild
         run: |
           xcodebuild \
             -scheme ClickerApp \
@@ -40,18 +33,16 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             OTHER_CODE_SIGN_FLAGS="" \
             SWIFT_COMPILATION_MODE=wholemodule \
+            OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
       - name: Create ZIP Archive of Project
         run: |
-          # Создаём ZIP‑архив всей текущей папки (исключая служебные директории)
           zip -r project-archive.zip . \
             -x ".git/*" \
             -x "build/*" \
             -x "*.zip" \
-            -x ".swiftpm/*" \
-            -x "*.xcodeproj/*" \
-            -x "*.xcworkspace/*"
+            -x ".swiftpm/*"
           echo "✅ ZIP archive created: project-archive.zip"
 
       - name: Upload Project Archive as Artifact
