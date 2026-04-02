@@ -1,4 +1,4 @@
-name: Build and Archive Project Folder
+name: Build Clicker App for iOS 12.5.8
 
 on:
   push:
@@ -7,40 +7,33 @@ on:
     branches: [ main ]
 
 jobs:
-  build-and-zip:
+  build-ios-app:
     runs-on: macos-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Verify Package Structure
+      - name: Verify Project Structure
         run: |
           echo "📁 Project structure:"
           find . -type f \( -name "*.swift" -o -name "Package.swift" \) -exec ls -la {} \;
-          echo "🗂️  Folder structure:"
+          echo "\n🗂️  Folder structure:"
           tree -a -I '.git|build' || ls -laR
 
-      - name: Build with Swift Package Manager
-        run: |
-          swift build --configuration release
-          echo "✅ Swift package built successfully"
-
-      - name: Generate Xcode Project (Optional)
+      - name: Generate Xcode Project from Swift Package
         run: |
           swift package generate-xcodeproj
           echo "✅ Xcode project generated: ClickerApp.xcodeproj"
 
       - name: List Available Schemes
+        id: list-schemes
         run: |
-          if [ -f "ClickerApp.xcodeproj" ]; then
-            xcodebuild -project ClickerApp.xcodeproj -list
-          else
-            echo "No Xcode project found, using SPM build"
-          fi
+          schemes=$(xcodebuild -project ClickerApp.xcodeproj -list | grep -A 10 "Schemes:" | tail -n +2 | grep -v "^$" | tr -d '[:space:]')
+          echo "schemes=$schemes" >> $GITHUB_OUTPUT
+          echo "Available schemes: $schemes"
 
-      - name: Xcode Build (if Xcode project exists)
-        if: success() && contains(steps.list-schemes.outputs.schemes, 'ClickerApp')
+      - name: Build with xcodebuild
         run: |
           xcodebuild \
             -project ClickerApp.xcodeproj \
@@ -55,19 +48,29 @@ jobs:
             SWIFT_COMPILATION_MODE=wholemodule \
             build
 
-      - name: Create ZIP archive of project folder
+      - name: Create ZIP Archive of Project
         run: |
-          # Создаём ZIP‑архив всей текущей папки (исключая .git, build и временные файлы)
+          # Создаём ZIP‑архив всей текущей папки (исключая служебные директории)
           zip -r project-archive.zip . \
             -x ".git/*" \
             -x "build/*" \
             -x "*.zip" \
-            -x ".swiftpm/*"
+            -x ".swiftpm/*" \
+            -x "*.xcodeproj/*" \
+            -x "*.xcworkspace/*"
           echo "✅ ZIP archive created: project-archive.zip"
 
-      - name: Upload project archive as artifact
+      - name: Upload Project Archive as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: project-source-code
           path: project-archive.zip
+          retention-days: 7
+
+      - name: Upload Build Artifacts (Optional)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-products
+          path: ./build/**
           retention-days: 7
