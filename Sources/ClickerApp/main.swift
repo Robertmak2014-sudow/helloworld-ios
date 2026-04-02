@@ -66,14 +66,7 @@ class ViewController: UIViewController {
         clickCount += 1
         updateLabel()
         
-        // Лёгкая анимация нажатия
-        UIView.animate(withDuration: 0.1, animations: {
-            self.clickButton.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
-        }) { _ in
-            UIView.animate(withDuration: 0.1) {
-                self.clickButton.transform = .identity
-            }
-        }
+        
     }
     
     private func updateLabel() {
