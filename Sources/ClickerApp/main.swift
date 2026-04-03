@@ -8,7 +8,7 @@ enum ProxyProtocol: String, Codable {
 
 struct V2RayConfig: Codable {
     let name: String
-    let protocol: ProxyProtocol
+    let `protocol`: ProxyProtocol  // Экранируем ключевое слово
     let address: String
     let port: Int
     let id: String // UUID для VLESS/VMess
@@ -95,15 +95,15 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
                 let configs = self?.parseProxyLinks(base64String)
                 DispatchQueue.main.async {
                     self?.profiles.append(contentsOf: configs ?? [])
-                    self?.tableView.reloadData()
+            self?.tableView.reloadData()
                 }
             } else {
                 // Парсинг Base64-JSON
-                guard let decodedData = Data(base64String.utf8),
+                guard let decodedData = Data(base64Encoded: base64String),  // Исправленный конструктор
                       let jsonString = String(data: decodedData, encoding: .utf8) else { return }
                 do {
                     let configs = try JSONDecoder().decode([V2RayConfig].self, from: Data(jsonString.utf8))
-                    DispatchQueue.main.async {
+            DispatchQueue.main.async {
                 self?.profiles.append(contentsOf: configs)
                 self?.tableView.reloadData()
             }
@@ -129,7 +129,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         let profile = profiles[indexPath.row]
-        cell.textLabel?.text = "\(profile.name) (\(profile.protocol.rawValue))"
+        cell.textLabel?.text = "\(profile.name) (\(profile.`protocol`.rawValue))"  // Экранируем `protocol`
         cell.detailTextLabel?.text = "\(profile.address):\(profile.port)"
         return cell
     }
@@ -142,8 +142,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     }
     
     private func connectToProxy(profile: V2RayConfig) {
-        print("Connecting to \(profile.protocol.rawValue): \(profile.name)")
-        // Здесь должна быть логика запуска Xray/V2Ray ядра
-        // и передачи ему конфигурации
+        print("Connecting to \(profile.`protocol`.rawValue): \(profile.name)")  // Экранируем `protocol`
     }
 }
