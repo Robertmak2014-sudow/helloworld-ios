@@ -49,5 +49,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: project-source-code
-          path: project-archive.zip
+          path: build/Build/Products/Release-iphoneos/project-archive.zip
           retention-days: 7
