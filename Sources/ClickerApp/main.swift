@@ -1,6 +1,7 @@
 import UIKit
 import NetworkExtension
 
+
 enum ProxyProtocol: String, Codable {
     case vless, vmess, shadowsocks, trojan, socks, http
 }
@@ -24,7 +25,7 @@ struct V2RayConfig: Codable {
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
     private var profiles: [V2RayConfig] = []
-
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = ViewController(profiles: &profiles)
@@ -36,32 +37,32 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
     private var profiles: [V2RayConfig]
     private let tableView = UITableView()
-
+    
+    // Подписка по умолчанию
+    private let defaultSubscriptionURL = "https://sub.skypasses.cc/DstcVLS1fsVKHkB2#%D0%98%D0%A2%20%D0%A0%D0%B5%D1%88%D0%B5%D0%BD%D0%B8%D1%8F"
+    
     init(profiles: inout [V2RayConfig]) {
         self.profiles = profiles
         super.init(nibName: nil, bundle: nil)
     }
-
+    
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        showInitialMessage()
+        loadDefaultSubscriptionIfNeeded()
     }
-
+    
     private func setupUI() {
         view.backgroundColor = .white
         title = "V2Ray Client"
-
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.dataSource = self
         tableView.delegate = self
         view.addSubview(tableView)
-
         let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addSubscription))
         navigationItem.rightBarButtonItem = addButton
-
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
@@ -69,21 +70,31 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
             tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
-
-    private func showInitialMessage() {
+    
+    private func loadDefaultSubscriptionIfNeeded() {
+        guard profiles.isEmpty else { return }
+        showLoadingMessage("Загрузка подписки по умолчанию...")
+        fetchSubscription(from: URL(string: defaultSubscriptionURL)!)
+    }
+    
+    private func showLoadingMessage(_ message: String) {
         let label = UILabel()
-        label.text = "Нажмите '+' для добавления подписки"
+        label.tag = 999 // Уникальный тег для удаления
+        label.text = message
         label.textAlignment = .center
         label.textColor = .gray
         label.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(label)
-
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
     }
-
+    
+    private func hideLoadingMessage() {
+        view.viewWithTag(999)?.removeFromSuperview()
+    }
+    
     @objc private func addSubscription() {
         let alert = UIAlertController(title: "Add Subscription", message: "Enter subscription URL", preferredStyle: .alert)
         alert.addTextField { $0.placeholder = "https://example.com/sub" }
@@ -95,30 +106,31 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         })
         present(alert, animated: true)
     }
-
+    
     private func fetchSubscription(from url: URL) {
         var request = URLRequest(url: url)
         request.setValue("Happ/1.0 (iPhone; iOS 16.0; Scale/2.00)", forHTTPHeaderField: "User-Agent")
-
         URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             guard let data = data, error == nil else {
                 DispatchQueue.main.async {
-                    self?.showError("Ошибка загрузки: \(error?.localizedDescription ?? "Неизвестная ошибка")")
+                    self?.hideLoadingMessage()
+            self?.showError("Ошибка загрузки: \(error?.localizedDescription ?? "Неизвестная ошибка")")
                 }
                 return
             }
-
             let base64String = String(data: data, encoding: .utf8) ?? ""
             if base64String.hasPrefix("vless://") || base64String.hasPrefix("ss://") {
                 let configs = self?.parseProxyLinks(base64String)
                 DispatchQueue.main.async {
-                    self?.profiles.append(contentsOf: configs ?? [])
+            self?.profiles.append(contentsOf: configs ?? [])
+            self?.hideLoadingMessage()
             self?.tableView.reloadData()
                 }
             } else {
                 guard let decodedData = Data(base64Encoded: base64String),
                       let jsonString = String(data: decodedData, encoding: .utf8) else {
                     DispatchQueue.main.async {
+                self?.hideLoadingMessage()
                 self?.showError("Неверный формат данных")
             }
             return
@@ -127,32 +139,32 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
                     let configs = try JSONDecoder().decode([V2RayConfig].self, from: Data(jsonString.utf8))
             DispatchQueue.main.async {
                 self?.profiles.append(contentsOf: configs)
+                self?.hideLoadingMessage()
                 self?.tableView.reloadData()
             }
                 } catch {
                     DispatchQueue.main.async {
+            self?.hideLoadingMessage()
             self?.showError("Ошибка парсинга: \(error.localizedDescription)")
             }
                 }
             }
         }.resume()
     }
-
+    
     private func parseProxyLinks(_ links: String) -> [V2RayConfig] {
         return []
     }
-
+    
     private func showError(_ message: String) {
         let alert = UIAlertController(title: "Ошибка", message: message, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
     }
-
     // MARK: - UITableViewDataSource
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return profiles.count
     }
-
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
         let profile = profiles[indexPath.row]
@@ -160,7 +172,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         cell.detailTextLabel?.text = "\(profile.address):\(profile.port)"
         return cell
     }
-
     // MARK: - UITableViewDelegate
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
