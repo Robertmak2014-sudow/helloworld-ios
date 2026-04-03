@@ -109,7 +109,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     
     private func fetchSubscription(from url: URL) {
         var request = URLRequest(url: url)
-        request.setValue("Happ/1.0 (iPhone; iOS 16.0; Scale/2.00)", forHTTPHeaderField: "User-Agent")
+        request.setValue("Happ/3.15.0", forHTTPHeaderField: "User-Agent")
         URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
             guard let data = data, error == nil else {
                 DispatchQueue.main.async {
