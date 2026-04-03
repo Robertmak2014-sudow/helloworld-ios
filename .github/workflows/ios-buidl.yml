@@ -36,12 +36,10 @@ jobs:
             OTHER_SWIFT_FLAGS="-parse-as-library" \
             build
 
-      - name: cd build
+      - name: Create ZIP archive of project folder
         run: |
           cd build/Build/Products/Release-iphoneos
           echo "Success!"
-      - name: Create ZIP archive of project folder
-        run: |
           # Создаём ZIP-архив всей текущей папки (исключая .git и build)
           zip -r project-archive.zip . \
             -x ".git/*" \
