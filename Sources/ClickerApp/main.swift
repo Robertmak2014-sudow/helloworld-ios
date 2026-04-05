@@ -128,11 +128,12 @@ class ViewController: UIViewController {
     @objc private func mainButtonTapped() {
         performGETRequest(from: "https://jetong.ru/rele/api.php") { response in
             if let response = response {
-                textView.text = "Текущий статус: " + response
+                self.textView.text = "Текущий статус: " + response
             } else {
-                textView.text = "Не удалось получить ответ"
+                self.textView.text = "Не удалось получить ответ"
             }
         }
+
 
 
     }
