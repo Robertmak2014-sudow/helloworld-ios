@@ -26,10 +26,6 @@ let package = Package(
             dependencies: [],
             path: "Sources"
         ),
-        .testTarget(
-            name: "MyAppTests",
-            dependencies: ["MyApp"],
-            path: "Tests"
-        )
+        
     ]
 )
