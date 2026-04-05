@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "ClickerApp",
     platforms: [
-        .iOS(.v12)  // Указываем минимальную версию iOS 12
+        .iOS(.v15)  // Указываем минимальную версию iOS 12
     ],
     products: [
         .executable(name: "ClickerApp", targets: ["ClickerApp"])
