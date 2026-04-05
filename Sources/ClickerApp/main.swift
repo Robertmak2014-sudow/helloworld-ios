@@ -1,181 +1,147 @@
 import UIKit
-import NetworkExtension
-
-
-enum ProxyProtocol: String, Codable {
-    case vless, vmess, shadowsocks, trojan, socks, http
-}
-
-struct V2RayConfig: Codable {
-    let name: String
-    let `protocol`: ProxyProtocol
-    let address: String
-    let port: Int
-    let id: String
-    let flow: String?
-    let method: String?
-    let password: String?
-    let security: String?
-    let sni: String?
-    let fingerprint: String?
-    let alterId: Int?
-}
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
-    private var profiles: [V2RayConfig] = []
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         window = UIWindow(frame: UIScreen.main.bounds)
-        window?.rootViewController = ViewController(profiles: &profiles)
+        window?.rootViewController = ViewController()
         window?.makeKeyAndVisible()
         return true
     }
 }
 
-class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
-    private var profiles: [V2RayConfig]
-    private let tableView = UITableView()
+class ViewController: UIViewController {
+    private let textView: UILabel = {
+        let label = UILabel()
+        label.text = "Текущий статус: Неизвестно"
+        label.textAlignment = .center
+        label.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.backgroundColor = UIColor.gray.withAlphaComponent(0.1)
+        label.layer.cornerRadius = 8
+        label.clipsToBounds = true
+        label.numberOfLines = 0
+        return label
+    }()
     
-    // Подписка по умолчанию
-    private let defaultSubscriptionURL = "https://sub.skypasses.cc/DstcVLS1fsVKHkB2#%D0%98%D0%A2%20%D0%A0%D0%B5%D1%88%D0%B5%D0%BD%D0%B8%D1%8F"
+    private let mainButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Обновить статус", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .blue
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.cornerRadius = 8
+        return button
+    }()
     
-    init(profiles: inout [V2RayConfig]) {
-        self.profiles = profiles
-        super.init(nibName: nil, bundle: nil)
-    }
+    private let leftButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Левая кнопка", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .green
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.cornerRadius = 8
+        return button
+    }()
     
-    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    private let rightButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Правая кнопка", for: .normal)
+        button.setTitleColor(.white, for: .normal)
+        button.backgroundColor = .orange
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.layer.cornerRadius = 8
+        return button
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        loadDefaultSubscriptionIfNeeded()
     }
     
     private func setupUI() {
         view.backgroundColor = .white
-        title = "V2Ray Client"
-        tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.dataSource = self
-        tableView.delegate = self
-        view.addSubview(tableView)
-        let addButton = UIBarButtonItem(barButtonSystemItem: .add, target: self, action: #selector(addSubscription))
-        navigationItem.rightBarButtonItem = addButton
+        
+        // Добавляем все элементы на экран
+        view.addSubview(textView)
+        view.addSubview(mainButton)
+        
+        let buttonsStack = UIStackView(arrangedSubviews: [leftButton, rightButton])
+        buttonsStack.axis = .horizontal
+        buttonsStack.spacing = 20
+        buttonsStack.distribution = .fillEqually
+        buttonsStack.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(buttonsStack)
+        
+        // Настройка действий кнопок
+        mainButton.addTarget(self, action: #selector(mainButtonTapped), for: .touchUpInside)
+        leftButton.addTarget(self, action: #selector(leftButtonTapped), for: .touchUpInside)
+        rightButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        
+        // Расстановка ограничений (constraints)
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            // Текстовое поле — сверху по центру
+            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            textView.heightAnchor.constraint(equalToConstant: 50),
+
+            // Кнопка под текстовым полем
+            mainButton.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 20),
+            mainButton.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
+            mainButton.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
+            mainButton.heightAnchor.constraint(equalToConstant: 50),
+
+            // Блок с двумя кнопками — по центру экрана
+            buttonsStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            buttonsStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
+            buttonsStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
+            buttonsStack.heightAnchor.constraint(equalToConstant: 50)
         ])
     }
     
-    private func loadDefaultSubscriptionIfNeeded() {
-        guard profiles.isEmpty else { return }
-        showLoadingMessage("Загрузка подписки по умолчанию...")
-        fetchSubscription(from: URL(string: defaultSubscriptionURL)!)
-    }
-    
-    private func showLoadingMessage(_ message: String) {
-        let label = UILabel()
-        label.tag = 999 // Уникальный тег для удаления
-        label.text = message
-        label.textAlignment = .center
-        label.textColor = .gray
-        label.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(label)
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
-        ])
-    }
-    
-    private func hideLoadingMessage() {
-        view.viewWithTag(999)?.removeFromSuperview()
-    }
-    
-    @objc private func addSubscription() {
-        let alert = UIAlertController(title: "Add Subscription", message: "Enter subscription URL", preferredStyle: .alert)
-        alert.addTextField { $0.placeholder = "https://example.com/sub" }
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Add", style: .default) { _ in
-            if let urlString = alert.textFields?.first?.text, let url = URL(string: urlString) {
-                self.fetchSubscription(from: url)
-            }
-        })
-        present(alert, animated: true)
-    }
-    
-    private func fetchSubscription(from url: URL) {
-        var request = URLRequest(url: url)
-        request.setValue("Happ/3.15.0", forHTTPHeaderField: "User-Agent")
-        URLSession.shared.dataTask(with: request) { [weak self] data, _, error in
-            guard let data = data, error == nil else {
-                DispatchQueue.main.async {
-                    self?.hideLoadingMessage()
-            self?.showError("Ошибка загрузки: \(error?.localizedDescription ?? "Неизвестная ошибка")")
-                }
+    private func performGETRequest(from urlString: String, completion: @escaping (String?) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: url) { data, _, error in
+            if let error = error {
+                print("Ошибка запроса: \(error)")
+                completion(nil)
                 return
             }
-            let base64String = String(data: data, encoding: .utf8) ?? ""
-            if base64String.hasPrefix("vless://") || base64String.hasPrefix("ss://") {
-                let configs = self?.parseProxyLinks(base64String)
-                DispatchQueue.main.async {
-            self?.profiles.append(contentsOf: configs ?? [])
-            self?.hideLoadingMessage()
-            self?.tableView.reloadData()
-                }
+            
+            guard let data = data, let responseString = String(data: data, encoding: .utf8) else {
+                completion(nil)
+                return
+            }
+            
+            completion(responseString)
+        }
+        task.resume()
+    }
+    
+    @objc private func mainButtonTapped() {
+        performGETRequest(from: "https://jetong.ru/rele/api.php") { response in
+            if let response = response {
+                textView.text = "Текущий статус: " + response
             } else {
-                guard let decodedData = Data(base64Encoded: base64String),
-                      let jsonString = String(data: decodedData, encoding: .utf8) else {
-                    DispatchQueue.main.async {
-                self?.hideLoadingMessage()
-                self?.showError("Неверный формат данных")
+                textView.text = "Не удалось получить ответ"
             }
-            return
-                }
-                do {
-                    let configs = try JSONDecoder().decode([V2RayConfig].self, from: Data(jsonString.utf8))
-            DispatchQueue.main.async {
-                self?.profiles.append(contentsOf: configs)
-                self?.hideLoadingMessage()
-                self?.tableView.reloadData()
-            }
-                } catch {
-                    DispatchQueue.main.async {
-            self?.hideLoadingMessage()
-            self?.showError("Ошибка парсинга: \(error.localizedDescription)")
-            }
-                }
-            }
-        }.resume()
+        }
+
+
     }
-    
-    private func parseProxyLinks(_ links: String) -> [V2RayConfig] {
-        return []
+
+    @objc private func leftButtonTapped() {
+        print("Левая кнопка нажата")
     }
-    
-    private func showError(_ message: String) {
-        let alert = UIAlertController(title: "Ошибка", message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-    // MARK: - UITableViewDataSource
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return profiles.count
-    }
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = UITableViewCell(style: .subtitle, reuseIdentifier: nil)
-        let profile = profiles[indexPath.row]
-        cell.textLabel?.text = "\(profile.name) (\(profile.`protocol`.rawValue))"
-        cell.detailTextLabel?.text = "\(profile.address):\(profile.port)"
-        return cell
-    }
-    // MARK: - UITableViewDelegate
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        tableView.deselectRow(at: indexPath, animated: true)
-        let profile = profiles[indexPath.row]
-        print("Connecting to \(profile.`protocol`.rawValue): \(profile.name)")
+
+    @objc private func rightButtonTapped() {
+        print("Правая кнопка нажата")
     }
 }
