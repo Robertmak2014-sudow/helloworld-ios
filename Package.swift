@@ -1,18 +1,38 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.7
 import PackageDescription
 
+
 let package = Package(
-    name: "ClickerApp",
+    name: "MyApp",
     platforms: [
-        .iOS(.v15)  // Указываем минимальную версию iOS 12
+        .iOS(.v13) // Минимальная версия iOS
     ],
     products: [
-        .executable(name: "ClickerApp", targets: ["ClickerApp"])
+        // Библиотека (если нужно)
+        .library(
+            name: "MyAppCore",
+            targets: ["MyAppCore"]
+        ),
+        // Исполняемый файл (если это приложение)
+        .executable(
+            name: "MyApp",
+            targets: ["MyApp"]
+        )
+    ],
+    dependencies: [
+        // Пример: добавьте зависимости, если нужны
+        // .package(url: "https://github.com/some/package.git", from: "1.0.0")
     ],
     targets: [
         .target(
-            name: "ClickerApp",
-            dependencies: []
+            name: "MyApp",
+            dependencies: [],
+            path: "Sources"
+        ),
+        .testTarget(
+            name: "MyAppTests",
+            dependencies: ["MyApp"],
+            path: "Tests"
         )
     ]
 )
