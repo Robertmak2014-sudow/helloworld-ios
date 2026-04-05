@@ -9,10 +9,7 @@ let package = Package(
     ],
     products: [
         // Библиотека (если нужно)
-        .library(
-            name: "MyAppCore",
-            targets: ["MyAppCore"]
-        ),
+        
         // Исполняемый файл (если это приложение)
         .executable(
             name: "MyApp",
