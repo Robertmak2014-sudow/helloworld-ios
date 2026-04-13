@@ -1,5 +1,4 @@
-name: Build Unsigned IPA
-
+name: Build IPA from Swift Package Binary
 
 on:
   push:
@@ -19,26 +18,57 @@ jobs:
       with:
         xcode-version: '16.4.0'
 
-    - name: Build and Archive (Unsigned)
+    - name: Build Binary
       run: |
-        xcodebuild \
-          -scheme ClickerApp \
-          -configuration Release \
-          -archivePath $HOME/archives/ClickerApp.xcarchive \
-          CODE_SIGN_IDENTITY="" \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          archive
+        swift build -c release --arch arm64
 
-    - name: Export Unsigned IPA
+    - name: Prepare IPA Structure
       run: |
-        xcodebuild \
-          -exportArchive \
-          -archivePath $HOME/archives/ClickerApp.xcarchive \
-          -exportOptionsPlist ExportOptions.plist \
-          -exportPath .
+        mkdir -p Payload/ClickerApp.app
+        cp .build/arm64-apple-macosx/release/YourPackageName Payload/ClickerApp.app/ClickerApp
+        chmod +x Payload/ClickerApp.app/ClickerApp
 
-    - name: Upload Unsigned IPA Artifact
+    - name: Create Info.plist
+      run: |
+        cat > Payload/ClickerApp.app/Info.plist << EOF
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+          <key>CFBundleDevelopmentRegion</key>
+          <string>en</string>
+          <key>CFBundleExecutable</key>
+          <string>ClickerApp</string>
+          <key>CFBundleIdentifier</key>
+          <string>com.yourcompany.ClickerApp</string>
+          <key>CFBundleInfoDictionaryVersion</key>
+          <string>6.0</string>
+          <key>CFBundleName</key>
+          <string>ClickerApp</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+          <key>CFBundleShortVersionString</key>
+          <string>1.0</string>
+          <key>CFBundleVersion</key>
+          <string>1</string>
+          <key>LSRequiresIPhoneOS</key>
+          <true/>
+          <key>UIRequiredDeviceCapabilities</key>
+          <array>
+            <string>arm64</string>
+          </array>
+        </dict>
+        </plist>
+        EOF
+
+    - name: Create IPA File
+      run: |
+        cd Payload
+        zip -r ../ClickerApp.ipa .
+        cd ..
+
+    - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ClickerApp-unsigned-ipa
+        name: ClickerApp-ipa
         path: ClickerApp.ipa
