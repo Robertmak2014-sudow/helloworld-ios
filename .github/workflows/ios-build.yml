@@ -1,4 +1,5 @@
-name: Build IPA from Swift Package (Legacy Method)
+name: Build IPA from Swift Package (Fixed Scheme)
+
 
 on:
   push:
@@ -17,14 +18,11 @@ jobs:
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: '16.4.0'
-    - name: List Available Schemes
-      run: |
-        xcodebuild -list
 
     - name: Generate Xcode project from Swift Package
       run: |
         xcodebuild \
-          -scheme "ClickerApp" \
+          -scheme "MyApp" \  # ← исправлено: было ClickerApp, стало MyApp
           -sdk iphoneos \
           -destination "generic/platform=iOS" \
           -configuration Release \
@@ -39,7 +37,7 @@ jobs:
     - name: Extract Binary from Build Products
       id: extract-binary
       run: |
-        BINARY_PATH=$(find ./build/Build/Products/Release-iphoneos -name "ClickerApp" -type f | head -n1)
+        BINARY_PATH=$(find ./build/Build/Products/Release-iphoneos -name "MyApp" -type f | head -n1)
         if [ -n "$BINARY_PATH" ]; then
           echo "binary-path=$BINARY_PATH" >> $GITHUB_OUTPUT
           echo "Found binary: $BINARY_PATH"
