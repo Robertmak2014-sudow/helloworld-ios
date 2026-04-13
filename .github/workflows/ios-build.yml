@@ -1,4 +1,4 @@
-name: Build IPA from Swift Package Binary
+name: Build IPA from Swift Package (Legacy Method)
 
 on:
   push:
@@ -18,14 +18,37 @@ jobs:
       with:
         xcode-version: '16.4.0'
 
-    - name: Build Binary
+    - name: Generate Xcode project from Swift Package
       run: |
-        swift build -c release --arch arm64
+        xcodebuild \
+          -scheme "ClickerApp" \
+          -sdk iphoneos \
+          -destination "generic/platform=iOS" \
+          -configuration Release \
+          -derivedDataPath ./build \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          OTHER_CODE_SIGN_FLAGS="" \
+          SWIFT_COMPILATION_MODE=wholemodule \
+          OTHER_SWIFT_FLAGS="-parse-as-library" \
+          build
+
+    - name: Extract Binary from Build Products
+      id: extract-binary
+      run: |
+        BINARY_PATH=$(find ./build/Build/Products/Release-iphoneos -name "ClickerApp" -type f | head -n1)
+        if [ -n "$BINARY_PATH" ]; then
+          echo "binary-path=$BINARY_PATH" >> $GITHUB_OUTPUT
+          echo "Found binary: $BINARY_PATH"
+        else
+          echo "Binary not found in build products"
+          exit 1
+        fi
 
     - name: Prepare IPA Structure
       run: |
         mkdir -p Payload/ClickerApp.app
-        cp .build/arm64-apple-macosx/release/YourPackageName Payload/ClickerApp.app/ClickerApp
+        cp ${{ steps.extract-binary.outputs.binary-path }} Payload/ClickerApp.app/ClickerApp
         chmod +x Payload/ClickerApp.app/ClickerApp
 
     - name: Create Info.plist
