@@ -1,5 +1,4 @@
-name: Build IPA from Swift Package (Fixed Scheme)
-
+name: Build IPA from Swift Package (Fixed Command)
 
 on:
   push:
@@ -22,7 +21,7 @@ jobs:
     - name: Generate Xcode project from Swift Package
       run: |
         xcodebuild \
-          -scheme "MyApp" \  # ← исправлено: было ClickerApp, стало MyApp
+          -scheme "MyApp" \
           -sdk iphoneos \
           -destination "generic/platform=iOS" \
           -configuration Release \
