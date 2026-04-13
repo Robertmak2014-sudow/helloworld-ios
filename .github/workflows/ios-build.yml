@@ -1,11 +1,9 @@
-name: Build Signed IPA for Real Device
-
+name: Build Unsigned IPA
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
-
 
 jobs:
   build:
@@ -15,55 +13,23 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-
     - name: Setup Xcode
       uses: maxim-lobanov/setup-xcode@v1
       with:
-        xcode-version: '26.3.0'
+        xcode-version: '16.4.0'
 
-    - name: Import Certificate
-      run: |
-        security create-keychain -p '' build.keychain
-        security default-keychain -s build.keychain
-        security unlock-keychain -p '' build.keychain
-        security import cert.p12 -k build.keychain -P @theappbox -T /usr/bin/codesign
-        security set-key-partition-list -S apple-tool:,apple: -s -k '' build.keychain
-
-
-    - name: Install Provisioning Profile
-      run: |
-        mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-        cp cert.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-
-    - name: Extract Provisioning Profile Info
-      id: profile-info
-      run: |
-        # Extract mobileprovision to plist
-        /usr/bin/security cms -D -i cert.mobileprovision > /tmp/profile.plist
-        PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist 2>/dev/null || echo "")
-        BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null | sed "s/^Q6SJUT5K5D\.//")
-        TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist 2>/dev/null)
-        echo "profile-name=$PROFILE_NAME" >> $GITHUB_OUTPUT
-        echo "bundle-id=$BUNDLE_ID" >> $GITHUB_OUTPUT
-        echo "team-id=$TEAM_ID" >> $GITHUB_OUTPUT
-      shell: bash
-
-
-    - name: Build and Archive
+    - name: Build and Archive (Unsigned)
       run: |
         xcodebuild \
           -package-path . \
           -scheme ClickerApp \
           -configuration Release \
           -archivePath $HOME/archives/ClickerApp.xcarchive \
-          CODE_SIGN_IDENTITY="iPhone Developer" \
-          PROVISIONING_PROFILE="${{ steps.profile-info.outputs.profile-name }}" \
-          DEVELOPMENT_TEAM="${{ steps.profile-info.outputs.team-id }}" \
-          PRODUCT_BUNDLE_IDENTIFIER="${{ steps.profile-info.outputs.bundle-id }}" \
+          CODE_SIGN_IDENTITY="" \
+          PROVISIONING_PROFILE_SPECIFIER="" \
           archive
 
-
-    - name: Export Signed IPA
+    - name: Export Unsigned IPA
       run: |
         xcodebuild \
           -exportArchive \
@@ -71,8 +37,8 @@ jobs:
           -exportOptionsPlist ExportOptions.plist \
           -exportPath .
 
-    - name: Upload IPA Artifact
+    - name: Upload Unsigned IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ClickerApp-ipa
+        name: ClickerApp-unsigned-ipa
         path: ClickerApp.ipa
