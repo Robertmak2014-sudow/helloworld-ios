@@ -1,5 +1,6 @@
 name: Build Unsigned IPA
 
+
 on:
   push:
     branches: [ main ]
@@ -21,7 +22,6 @@ jobs:
     - name: Build and Archive (Unsigned)
       run: |
         xcodebuild \
-          -package-path . \
           -scheme ClickerApp \
           -configuration Release \
           -archivePath $HOME/archives/ClickerApp.xcarchive \
