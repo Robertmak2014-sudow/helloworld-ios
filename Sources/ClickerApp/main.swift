@@ -13,49 +13,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 class ViewController: UIViewController {
-    private let textView: UILabel = {
+    private let countLabel: UILabel = {
         let label = UILabel()
-        label.text = "Текущий статус: Неизвестно"
+        label.text = "Счётчик: 0"
         label.textAlignment = .center
-        label.font = UIFont.systemFont(ofSize: 20, weight: .bold)
+        label.font = UIFont.systemFont(ofSize: 32, weight: .bold)
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.backgroundColor = UIColor.gray.withAlphaComponent(0.1)
-        label.layer.cornerRadius = 8
-        label.clipsToBounds = true
-        label.numberOfLines = 0
         return label
     }()
     
-    private let mainButton: UIButton = {
+    private let clickButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Обновить статус", for: .normal)
+        button.setTitle("КЛИК!", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .blue
+        button.backgroundColor = .systemBlue
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.layer.cornerRadius = 8
+        button.layer.cornerRadius = 12
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 24, weight: .semibold)
         return button
     }()
     
-    private let leftButton: UIButton = {
+    private let resetButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Левая кнопка", for: .normal)
+        button.setTitle("Сброс", for: .normal)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .green
+        button.backgroundColor = .systemRed
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.layer.cornerRadius = 8
+        button.layer.cornerRadius = 12
         return button
     }()
-    
-    private let rightButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Правая кнопка", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .orange
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.layer.cornerRadius = 8
-        return button
-    }()
-    
+
+    private var clickCount = 0
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
@@ -64,85 +53,44 @@ class ViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .white
         
-        // Добавляем все элементы на экран
-        view.addSubview(textView)
-        view.addSubview(mainButton)
-        
-        let buttonsStack = UIStackView(arrangedSubviews: [leftButton, rightButton])
-        buttonsStack.axis = .horizontal
-        buttonsStack.spacing = 20
-        buttonsStack.distribution = .fillEqually
-        buttonsStack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(buttonsStack)
+        // Добавляем элементы на экран
+        view.addSubview(countLabel)
+        view.addSubview(clickButton)
+        view.addSubview(resetButton)
         
         // Настройка действий кнопок
-        mainButton.addTarget(self, action: #selector(mainButtonTapped), for: .touchUpInside)
-        leftButton.addTarget(self, action: #selector(leftButtonTapped), for: .touchUpInside)
-        rightButton.addTarget(self, action: #selector(rightButtonTapped), for: .touchUpInside)
+        clickButton.addTarget(self, action: #selector(clickButtonTapped), for: .touchUpInside)
+        resetButton.addTarget(self, action: #selector(resetButtonTapped), for: .touchUpInside)
         
         // Расстановка ограничений (constraints)
         NSLayoutConstraint.activate([
-            // Текстовое поле — сверху по центру
-            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            textView.heightAnchor.constraint(equalToConstant: 50),
-
-            // Кнопка под текстовым полем
-            mainButton.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 20),
-            mainButton.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
-            mainButton.trailingAnchor.constraint(equalTo: textView.trailingAnchor),
-            mainButton.heightAnchor.constraint(equalToConstant: 50),
-
-            // Блок с двумя кнопками — по центру экрана
-            buttonsStack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            buttonsStack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 40),
-            buttonsStack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -40),
-            buttonsStack.heightAnchor.constraint(equalToConstant: 50)
+            // Счётчик — сверху по центру
+            countLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            countLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 80),
+            
+            // Кнопка клика — по центру ниже счётчика
+            clickButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            clickButton.topAnchor.constraint(equalTo: countLabel.bottomAnchor, constant: 40),
+            clickButton.widthAnchor.constraint(equalToConstant: 160),
+            clickButton.heightAnchor.constraint(equalToConstant: 60),
+            
+            // Кнопка сброса — по центру внизу
+            resetButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            resetButton.topAnchor.constraint(equalTo: clickButton.bottomAnchor, constant: 20),
+            resetButton.widthAnchor.constraint(equalToConstant: 120),
+            resetButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
     
-    private func performGETRequest(from urlString: String, completion: @escaping (String?) -> Void) {
-        guard let url = URL(string: urlString) else {
-            completion(nil)
-            return
-        }
-        
-        let task = URLSession.shared.dataTask(with: url) { data, _, error in
-            if let error = error {
-                print("Ошибка запроса: \(error)")
-                completion(nil)
-                return
-            }
-            
-            guard let data = data, let responseString = String(data: data, encoding: .utf8) else {
-                completion(nil)
-                return
-            }
-            
-            completion(responseString)
-        }
-        task.resume()
+    @objc private func clickButtonTapped() {
+        clickCount += 1
+        countLabel.text = "Счётчик: \(clickCount)"
+        // Лёгкая вибрация при клике (опционально)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
     
-    @objc private func mainButtonTapped() {
-        performGETRequest(from: "https://jetong.ru/rele/api.php") { response in
-            if let response = response {
-                self.textView.text = "Текущий статус: " + response
-            } else {
-                self.textView.text = "Не удалось получить ответ"
-            }
-        }
-
-
-
-    }
-
-    @objc private func leftButtonTapped() {
-        print("Левая кнопка нажата")
-    }
-
-    @objc private func rightButtonTapped() {
-        print("Правая кнопка нажата")
+    @objc private func resetButtonTapped() {
+        clickCount = 0
+        countLabel.text = "Счётчик: 0"
     }
 }
