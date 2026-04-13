@@ -6,6 +6,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+
 jobs:
   build:
     runs-on: macos-latest
@@ -19,7 +20,6 @@ jobs:
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: '15.3.0'
-
 
     - name: Import Certificate
       run: |
@@ -38,6 +38,8 @@ jobs:
     - name: Extract Provisioning Profile Info
       id: profile-info
       run: |
+        # Extract mobileprovision to plist
+        /usr/bin/security cms -D -i cert.mobileprovision > /tmp/profile.plist
         PROFILE_NAME=$(/usr/libexec/PlistBuddy -c "Print :Name" /tmp/profile.plist 2>/dev/null || echo "")
         BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :Entitlements:application-identifier" /tmp/profile.plist 2>/dev/null | sed "s/^Q6SJUT5K5D\.//")
         TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" /tmp/profile.plist 2>/dev/null)
@@ -45,10 +47,7 @@ jobs:
         echo "bundle-id=$BUNDLE_ID" >> $GITHUB_OUTPUT
         echo "team-id=$TEAM_ID" >> $GITHUB_OUTPUT
       shell: bash
-      env:
-        CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
-      run: |
-        /usr/bin/security cms -D -i cert.mobileprovision > /tmp/profile.plist
+
 
     - name: Build and Archive
       run: |
@@ -62,6 +61,7 @@ jobs:
           DEVELOPMENT_TEAM="${{ steps.profile-info.outputs.team-id }}" \
           PRODUCT_BUNDLE_IDENTIFIER="${{ steps.profile-info.outputs.bundle-id }}" \
           archive
+
 
     - name: Export Signed IPA
       run: |
